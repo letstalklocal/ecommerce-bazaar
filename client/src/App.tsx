@@ -14,10 +14,24 @@ import CategoriesPage from "./pages/admin/CategoriesPage";
 import HeroPage from "./pages/admin/HeroPage";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 function App() {
   const { user, isLoading } = useUser();
   const [location, setLocation] = useLocation();
+
+  // Handle admin route protection
+  useEffect(() => {
+    if (!isLoading) {
+      if (location.startsWith("/admin")) {
+        if (!user && location !== "/admin/login") {
+          setLocation("/admin/login");
+        } else if (user && location === "/admin/login") {
+          setLocation("/admin");
+        }
+      }
+    }
+  }, [user, isLoading, location, setLocation]);
 
   // Only show loading during initial authentication check
   if (isLoading) {
@@ -30,18 +44,12 @@ function App() {
 
   // Admin routes
   if (location.startsWith("/admin")) {
-    if (!user && location !== "/admin/login") {
-      setLocation("/admin/login");
-      return null;
-    }
-
-    if (location === "/admin/login" && user) {
-      setLocation("/admin");
-      return null;
-    }
-
     if (location === "/admin/login") {
       return <LoginPage />;
+    }
+
+    if (!user) {
+      return null; // Let the useEffect handle the redirect
     }
 
     return (

@@ -6,11 +6,13 @@ export function useUser() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/user"],
     retry: false,
     refetchOnWindowFocus: false,
-    refetchInterval: false
+    refetchInterval: false,
+    staleTime: Infinity,
+    initialData: null
   });
 
   const login = useMutation({
@@ -49,7 +51,7 @@ export function useUser() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.setQueryData(["/api/user"], null);
       toast({ title: "Logged out successfully" });
     },
     onError: (error: Error) => {
