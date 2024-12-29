@@ -2,6 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import express from "express"; // Added import for express.static
 import {
   products,
   categories,
@@ -12,8 +16,30 @@ import {
 } from "@db/schema";
 import { eq } from "drizzle-orm";
 
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const uploadDir = path.join(process.cwd(), "uploads");
+    // Create uploads directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (_req, file, cb) => {
+    // Generate unique filename
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage });
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Serve uploaded files statically
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   // Public routes
   app.get("/api/products", async (req, res) => {
@@ -68,6 +94,16 @@ export function registerRoutes(app: Express): Server {
     }
     next();
   }
+
+  // File upload endpoint
+  app.post("/api/upload", requireAuth, upload.single("image"), (req, res) => {
+    if (!req.file) {
+      return res.status(400).send("No file uploaded");
+    }
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+    res.json({ imageUrl });
+  });
 
   app.post("/api/products", requireAuth, async (req, res) => {
     const result = insertProductSchema.safeParse(req.body);
@@ -145,7 +181,7 @@ export function registerRoutes(app: Express): Server {
 
     // Delete existing hero if any
     await db.delete(hero);
-    
+
     const newHero = await db.insert(hero).values(result.data).returning();
     res.json(newHero[0]);
   });

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useHero } from "@/hooks/use-hero";
 import {
   Card,
@@ -9,13 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Upload } from "lucide-react";
 import type { InsertHero } from "@db/schema";
 
 type HeroFormData = Omit<InsertHero, "id">;
 
 export default function HeroPage() {
   const { hero, updateHero } = useHero();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const form = useForm<HeroFormData>({
     defaultValues: {
       title: hero?.title || "",
@@ -24,8 +28,34 @@ export default function HeroPage() {
     },
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      // Set the form's imageUrl to a temporary preview
+      form.setValue("imageUrl", URL.createObjectURL(file));
+    }
+  };
+
   const onSubmit = async (data: HeroFormData) => {
     try {
+      // If there's a selected file, upload it first
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("image", selectedFile);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+
+        if (!uploadRes.ok) throw new Error(await uploadRes.text());
+        const { imageUrl } = await uploadRes.json();
+        data.imageUrl = imageUrl;
+      }
+
       await updateHero.mutateAsync(data);
     } catch (error) {
       console.error(error);
@@ -61,10 +91,40 @@ export default function HeroPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Input
-                  placeholder="Image URL"
-                  {...form.register("imageUrl", { required: true })}
-                />
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Image URL"
+                      {...form.register("imageUrl", { required: true })}
+                      className="hidden"
+                    />
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {hero?.imageUrl ? "Replace Image" : "Upload Image"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                {(previewUrl || hero?.imageUrl) && (
+                  <div className="mt-2 aspect-[16/9] relative rounded-lg overflow-hidden border">
+                    <img
+                      src={previewUrl || hero?.imageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
               </div>
               <Button
                 type="submit"
@@ -89,7 +149,7 @@ export default function HeroPage() {
           <CardContent>
             <div className="aspect-[16/9] relative overflow-hidden rounded-lg">
               <img
-                src={form.watch("imageUrl") || hero?.imageUrl}
+                src={previewUrl || form.watch("imageUrl") || hero?.imageUrl}
                 alt="Hero banner preview"
                 className="w-full h-full object-cover"
               />
