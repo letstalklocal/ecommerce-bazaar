@@ -8,6 +8,9 @@ export function useUser() {
 
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/user"],
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchInterval: false
   });
 
   const login = useMutation({

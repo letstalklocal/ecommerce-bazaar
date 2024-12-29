@@ -17,8 +17,9 @@ import { Loader2 } from "lucide-react";
 
 function App() {
   const { user, isLoading } = useUser();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
+  // Only show loading during initial authentication check
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -30,12 +31,12 @@ function App() {
   // Admin routes
   if (location.startsWith("/admin")) {
     if (!user && location !== "/admin/login") {
-      window.location.href = "/admin/login";
+      setLocation("/admin/login");
       return null;
     }
 
     if (location === "/admin/login" && user) {
-      window.location.href = "/admin";
+      setLocation("/admin");
       return null;
     }
 
