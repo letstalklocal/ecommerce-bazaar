@@ -3,7 +3,7 @@ import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
@@ -17,7 +17,6 @@ declare global {
   }
 }
 
-// Simple password hashing with a fixed salt length
 const crypto = {
   hash: async (password: string) => {
     const salt = randomBytes(16).toString("hex");
@@ -26,8 +25,8 @@ const crypto = {
   },
   verify: async (password: string, stored: string) => {
     const [hash, salt] = stored.split(".");
-    const buf = (await scryptAsync(password, salt, 32)) as Buffer;
-    return buf.toString("hex") === hash;
+    const derivedKey = (await scryptAsync(password, salt, 32)) as Buffer;
+    return derivedKey.toString("hex") === hash;
   },
 };
 
@@ -96,6 +95,50 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Add registration endpoint
+  app.post("/api/register", async (req, res) => {
+    try {
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).send("Invalid input");
+      }
+
+      const { username, password } = result.data;
+
+      // Check if user exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (existingUser) {
+        return res.status(400).send("Username already taken");
+      }
+
+      // Hash password and create user
+      const hashedPassword = await crypto.hash(password);
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username,
+          password: hashedPassword,
+        })
+        .returning();
+
+      // Log in the new user
+      req.login(newUser, (err) => {
+        if (err) {
+          return res.status(500).send("Error logging in after registration");
+        }
+        res.json({ message: "Registration successful" });
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).send("Error creating user");
+    }
+  });
+
   app.post("/api/login", (req, res, next) => {
     const result = insertUserSchema.safeParse(req.body);
     if (!result.success) {
@@ -111,11 +154,10 @@ export function setupAuth(app: Express) {
         return res.status(400).send(info.message ?? "Login failed");
       }
 
-      req.logIn(user, (err) => {
+      req.login(user, (err) => {
         if (err) {
           return next(err);
         }
-
         return res.json({
           message: "Login successful",
           user: { id: user.id, username: user.username },

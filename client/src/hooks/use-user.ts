@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { User, InsertUser } from "@db/schema";
+import type { SelectUser, InsertUser } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 
 export function useUser() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: user, isLoading } = useQuery<User | null>({
+  const { data: user, isLoading } = useQuery<SelectUser | null>({
     queryKey: ["/api/user"],
     retry: false,
     refetchOnWindowFocus: false,
@@ -24,7 +24,9 @@ export function useUser() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -37,6 +39,34 @@ export function useUser() {
         description: error.message,
         variant: "destructive",
       });
+      throw error;
+    },
+  });
+
+  const register = useMutation({
+    mutationFn: async (userData: InsertUser) => {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error registering",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
     },
   });
 
@@ -60,13 +90,15 @@ export function useUser() {
         description: error.message,
         variant: "destructive",
       });
+      throw error;
     },
   });
 
   return {
     user,
     isLoading,
-    login,
-    logout,
+    login: login.mutateAsync,
+    logout: logout.mutateAsync,
+    register: register.mutateAsync,
   };
 }
