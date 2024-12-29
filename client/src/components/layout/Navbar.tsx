@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Menu } from "lucide-react";
+import { Menu, Lock } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -35,6 +35,12 @@ export function Navbar() {
                 </a>
               </Link>
             ))}
+            <Link href="/admin">
+              <a className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center">
+                <Lock className="h-4 w-4 mr-1" />
+                Admin
+              </a>
+            </Link>
           </div>
 
           {/* Mobile Navigation */}
@@ -56,6 +62,15 @@ export function Navbar() {
                     </a>
                   </Link>
                 ))}
+                <Link href="/admin">
+                  <a
+                    className="text-lg font-medium text-muted-foreground flex items-center"
+                    onClick={() => setOpen(false)}
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Admin
+                  </a>
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
