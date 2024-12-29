@@ -7,11 +7,11 @@ import ProductPage from "@/pages/ProductPage";
 import CategoryPage from "@/pages/CategoryPage";
 import AboutPage from "@/pages/AboutPage";
 import ContactPage from "@/pages/ContactPage";
-import LoginPage from "@/pages/admin/LoginPage";
-import DashboardPage from "@/pages/admin/DashboardPage";
-import ProductsPage from "@/pages/admin/ProductsPage";
-import CategoriesPage from "@/pages/admin/CategoriesPage";
-import HeroPage from "@/pages/admin/HeroPage";
+import LoginPage from "./pages/admin/LoginPage";
+import DashboardPage from "./pages/admin/DashboardPage";
+import ProductsPage from "./pages/admin/ProductsPage";
+import CategoriesPage from "./pages/admin/CategoriesPage";
+import HeroPage from "./pages/admin/HeroPage";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
