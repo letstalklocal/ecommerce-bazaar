@@ -16,5 +16,6 @@ INSERT INTO products (name, description, price, image_url, category_id, is_popul
 ('Leather Wallet', 'Genuine leather wallet with multiple compartments', 4999, 'https://images.unsplash.com/photo-1627123424574-724758594e93', 2, false),
 ('Running Shoes', 'Comfortable running shoes for professional athletes', 8999, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff', 4, true);
 
--- Note: The above statements are in the correct order to maintain referential integrity
--- To restore: Simply run these statements in order after creating the schema
+-- Admin user (password is 'admin123')
+INSERT INTO users (username, password) VALUES
+('admin', 'c9749b8b7e42e43d0a6276df87056f50879ce937c2979502b855c0cd0f49cd77d48bbf5c5408ae62a15a5c67d54e4c48747e583f3a46072a8927cb24ae10cef0.2cb226c1dd9caf5337e021c536f8c345');
