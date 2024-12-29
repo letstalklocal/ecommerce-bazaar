@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 
 function App() {
   const { user, isLoading } = useUser();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -27,18 +28,18 @@ function App() {
   }
 
   // Admin routes
-  if (window.location.pathname.startsWith("/admin")) {
-    if (!user && window.location.pathname !== "/admin/login") {
+  if (location.startsWith("/admin")) {
+    if (!user && location !== "/admin/login") {
       window.location.href = "/admin/login";
       return null;
     }
 
-    if (window.location.pathname === "/admin/login" && user) {
+    if (location === "/admin/login" && user) {
       window.location.href = "/admin";
       return null;
     }
 
-    if (window.location.pathname === "/admin/login") {
+    if (location === "/admin/login") {
       return <LoginPage />;
     }
 
