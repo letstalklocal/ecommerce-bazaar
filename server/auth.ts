@@ -5,34 +5,31 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type User } from "@db/schema";
+import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  },
-  compare: async (suppliedPassword: string, storedPassword: string) => {
-    const [hashedPassword, salt] = storedPassword.split(".");
-    const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-    const suppliedPasswordBuf = (await scryptAsync(
-      suppliedPassword,
-      salt,
-      64
-    )) as Buffer;
-    return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
-  },
-};
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User extends SelectUser {}
   }
 }
+
+// Simple password hashing with a fixed salt length
+const crypto = {
+  hash: async (password: string) => {
+    const salt = randomBytes(16).toString("hex");
+    const buf = (await scryptAsync(password, salt, 32)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
+  },
+  verify: async (password: string, stored: string) => {
+    const [hash, salt] = stored.split(".");
+    const buf = (await scryptAsync(password, salt, 32)) as Buffer;
+    return buf.toString("hex") === hash;
+  },
+};
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
@@ -69,10 +66,12 @@ export function setupAuth(app: Express) {
         if (!user) {
           return done(null, false, { message: "Incorrect username." });
         }
-        const isMatch = await crypto.compare(password, user.password);
-        if (!isMatch) {
+
+        const isValid = await crypto.verify(password, user.password);
+        if (!isValid) {
           return done(null, false, { message: "Incorrect password." });
         }
+
         return done(null, user);
       } catch (err) {
         return done(err);
