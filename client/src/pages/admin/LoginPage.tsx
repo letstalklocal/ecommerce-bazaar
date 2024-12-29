@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function LoginPage() {
   const { login } = useUser();
+  const [, setLocation] = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +24,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login.mutateAsync({ username, password });
-      window.location.href = "/admin";
+      setLocation("/admin");
     } catch (error) {
       setIsLoading(false);
     }
